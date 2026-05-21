@@ -1,0 +1,599 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ระบบลงทะเบียนเรียน - คณะแอลกอฮอล์ศาสตร์</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        background-color: #f4f6f9;
+        font-family: "Sarabun", sans-serif;
+        font-size: 14px;
+      }
+      /* Styles สำหรับหน้า Login Overlay */
+      #login-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #003366;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+      }
+      .login-box {
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        width: 100%;
+        max-width: 400px;
+        text-align: center;
+      }
+      .login-logo {
+        font-size: 3rem;
+        margin-bottom: 15px;
+      }
+
+      /* Styles สำหรับหน้าหลัก */
+      #main-content {
+        display: none; /* ซ่อนไว้จนกว่าจะ login */
+      }
+      .navbar-custom {
+        background-color: #003366;
+        padding: 15px 0;
+      }
+      .navbar-custom .navbar-brand,
+      .navbar-custom .nav-link {
+        color: #ffffff;
+      }
+      .card-header-custom {
+        background-color: #e9ecef;
+        font-weight: bold;
+        color: #333;
+        border-bottom: 2px solid #003366;
+      }
+      .table th {
+        background-color: #003366;
+        color: white;
+        text-align: center;
+        font-weight: 500;
+      }
+      .table td {
+        vertical-align: middle;
+        text-align: center;
+      }
+      .text-left {
+        text-align: left !important;
+      }
+      .footer {
+        background-color: #003366;
+        color: white;
+        padding: 20px 0;
+        margin-top: 50px;
+        text-align: center;
+        font-size: 0.9em;
+      }
+      .badge-status {
+        background-color: #28a745;
+        padding: 5px 10px;
+        border-radius: 20px;
+        color: white;
+        font-size: 0.8em;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- หน้าต่าง Login เข้าสู่ระบบ -->
+    <div id="login-overlay">
+      <div class="login-box">
+        <div class="login-logo">🍻</div>
+        <h4 class="mb-2" style="color: #003366; font-weight: bold">
+          ระบบลงทะเบียนเรียน
+        </h4>
+        <p class="text-muted mb-4">คณะแอลกอฮอล์ศาสตร์ (REG-SYS)</p>
+
+        <form
+          id="loginForm"
+          onsubmit="
+            event.preventDefault();
+            login();
+          "
+        >
+          <div class="mb-3 text-start">
+            <label for="studentIdInput" class="form-label"
+              >รหัสนักศึกษา (ใส่เลขอะไรก็ได้)</label
+            >
+            <input
+              type="text"
+              class="form-control"
+              id="studentIdInput"
+              placeholder="เช่น 69010404"
+              required
+            />
+          </div>
+          <div class="mb-4 text-start">
+            <label for="studentNameInput" class="form-label"
+              >ชื่อ - นามสกุล (หรือฉายาในวงเหล้า)</label
+            >
+            <input
+              type="text"
+              class="form-control"
+              id="studentNameInput"
+              placeholder="เช่น นายสุดหล่อ คอทองแดง"
+              required
+            />
+          </div>
+          <button
+            type="submit"
+            class="btn btn-primary w-100"
+            style="background-color: #003366; border: none"
+          >
+            เข้าสู่ระบบ (พร้อมบวก)
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- หน้าหลักระบบลงทะเบียน (จะแสดงเมื่อ Login ผ่าน) -->
+    <div id="main-content">
+      <!-- Navbar -->
+      <nav class="navbar navbar-expand-lg navbar-custom shadow-sm">
+        <div
+          class="container d-flex justify-content-between align-items-center"
+        >
+          <a class="navbar-brand" href="#"
+            ><strong>REG-SYS</strong> ระบบลงทะเบียนเรียนออนไลน์</a
+          >
+          <div class="text-white d-none d-md-block" id="nav-user-info">
+            ภาคเรียนที่ 1/2569 | เข้าสู่ระบบโดย:
+            <span id="display-nav-id">-</span>
+          </div>
+        </div>
+      </nav>
+
+      <div class="container mt-4">
+        <!-- ข้อมูลนิสิต/นักศึกษา -->
+        <div class="card mb-4 shadow-sm border-0">
+          <div class="card-header card-header-custom">
+            ข้อมูลนักศึกษา (Student Information)
+          </div>
+          <div class="card-body bg-white">
+            <div class="row">
+              <div class="col-md-6 mb-2 mb-md-0">
+                <p class="mb-1">
+                  <strong>รหัสนักศึกษา:</strong>
+                  <span id="display-card-id" class="text-primary">-</span>
+                </p>
+                <p class="mb-1">
+                  <strong>ชื่อ-สกุล:</strong>
+                  <span id="display-card-name" class="font-weight-bold">-</span>
+                  <span class="badge-status ms-2"
+                    >สถานะ: ปกติ (ตับยังทำงาน)</span
+                  >
+                </p>
+              </div>
+              <div class="col-md-6">
+                <p class="mb-1">
+                  <strong>คณะ:</strong> แอลกอฮอล์ศาสตร์ วิทยาเขตโคราช
+                </p>
+                <p class="mb-1">
+                  <strong>สาขาวิชา:</strong> วิศวกรรมการชงและผสมสุรา
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ตารางรายวิชาที่เปิดสอน -->
+        <div class="card mb-4 shadow-sm border-0">
+          <div class="card-header card-header-custom">
+            ค้นหารายวิชาที่เปิดสอน (Available Courses)
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table
+                class="table table-bordered table-striped table-hover mb-0"
+              >
+                <thead>
+                  <tr>
+                    <th width="10%">รหัสวิชา</th>
+                    <th width="25%">ชื่อวิชา (Course Title)</th>
+                    <th width="20%">หน่วยกิต (อุปกรณ์)</th>
+                    <th width="15%">อาจารย์ผู้สอน</th>
+                    <th width="15%">เวลาเรียน</th>
+                    <th width="15%">การจัดการ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>ALC101</td>
+                    <td class="text-left">
+                      <strong>บคส (BKS by KK Bar)</strong><br /><small
+                        class="text-muted"
+                        >ซอย 30 กันยา (แหล่งรวมวัยรุ่นเทคโน-ราชภัฏ)</small
+                      >
+                    </td>
+                    <td>3 (เบียร์ 3 ลัง - แสงโสม 1 กลม)</td>
+                    <td>พี่การ์ดหน้าร้าน</td>
+                    <td>21.00 - 02.00 น.</td>
+                    <td>
+                      <button
+                        class="btn btn-outline-primary btn-sm w-100 enroll-btn"
+                        onclick="
+                          enroll(
+                            'ALC101',
+                            'บคส',
+                            'เบียร์ 3 ลัง + แสง 1 กลม',
+                            this,
+                          )
+                        "
+                      >
+                        + เพิ่มรายวิชา
+                      </button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>ALC102</td>
+                    <td class="text-left">
+                      <strong>WARP MUSIC BAR</strong><br /><small
+                        class="text-muted"
+                        >EDM แดนซ์ยับ / โปรเปิดบิลแถมแจ่วฮ้อน!</small
+                      >
+                    </td>
+                    <td>4 (เบียร์ 2 ทาวเวอร์ - แสงโสม 2 กลม)</td>
+                    <td>DJ สายย่อ</td>
+                    <td>20.00 - 02.00 น.</td>
+                    <td>
+                      <button
+                        class="btn btn-outline-primary btn-sm w-100 enroll-btn"
+                        onclick="
+                          enroll(
+                            'ALC102',
+                            'WARP MUSIC BAR',
+                            'เบียร์ 2 ทาว + แสง 2 กลม',
+                            this,
+                          )
+                        "
+                      >
+                        + เพิ่มรายวิชา
+                      </button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>ALC103</td>
+                    <td class="text-left">
+                      <strong>BF 30 Kanya</strong><br /><small
+                        class="text-muted"
+                        >ผับดังซอย 30 กันยา (แสงสีเสียงจัดเต็ม)</small
+                      >
+                    </td>
+                    <td>2 (เบียร์ 1 ลัง - แสงโสม 1 แบน)</td>
+                    <td>PR สาวสวยชาวโคราช</td>
+                    <td>20.30 - 01.30 น.</td>
+                    <td>
+                      <button
+                        class="btn btn-outline-primary btn-sm w-100 enroll-btn"
+                        onclick="
+                          enroll(
+                            'ALC103',
+                            'BF',
+                            'เบียร์ 1 ลัง + แสง 1 แบน',
+                            this,
+                          )
+                        "
+                      >
+                        + เพิ่มรายวิชา
+                      </button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>ALC104</td>
+                    <td class="text-left">
+                      <strong>บ้านกูเอง</strong><br /><small class="text-muted"
+                        >ซอย 30 กันยา (ร้านนั่งชิล ดนตรีสด
+                        ฟีลเหมือนกินอยู่บ้าน)</small
+                      >
+                    </td>
+                    <td>3 (เบียร์ 3 ทาวเวอร์ - แสงโสม 1 กลม)</td>
+                    <td>นักร้องนำร้านบ้านกูเอง</td>
+                    <td>19.00 - 00.00 น.</td>
+                    <td>
+                      <button
+                        class="btn btn-outline-primary btn-sm w-100 enroll-btn"
+                        onclick="
+                          enroll(
+                            'ALC104',
+                            'บ้านกูเอง',
+                            'เบียร์ 3 ทาว + แสง 1 กลม',
+                            this,
+                          )
+                        "
+                      >
+                        + เพิ่มรายวิชา
+                      </button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>ALC105</td>
+                    <td class="text-left">
+                      <strong>โฟล์คพระนคร Story@KORAT</strong><br /><small
+                        class="text-muted"
+                        >ถนนกุดั่น (ดนตรีชิลๆ สลับดนตรีหมอลำม่วนจ้วด)</small
+                      >
+                    </td>
+                    <td>3 (เบียร์ 3 เหยือก - แสงโสม 1 กลม)</td>
+                    <td>นักร้องอินดี้ / หมอลำซิ่ง</td>
+                    <td>18.00 - 00.00 น.</td>
+                    <td>
+                      <button
+                        class="btn btn-outline-primary btn-sm w-100 enroll-btn"
+                        onclick="
+                          enroll(
+                            'ALC105',
+                            'โฟล์คพระนคร',
+                            'เบียร์ 3 เหยือก + แสง 1 กลม',
+                            this,
+                          )
+                        "
+                      >
+                        + เพิ่มรายวิชา
+                      </button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>ALC106</td>
+                    <td class="text-left">
+                      <strong>โรงเหล้ามิตรภาพ / แสงจันทร์ โคราช</strong
+                      ><br /><small class="text-muted"
+                        >ตำนานมหาชนคนโคราช (ชนแก้วโต๊ะข้างๆ)</small
+                      >
+                    </td>
+                    <td>5 (เบียร์ 5 ลัง - แสงโสม 3 กลม)</td>
+                    <td>คนบ้านเดียวกันโต๊ะข้างๆ</td>
+                    <td>21.00 - 02.00 น.</td>
+                    <td>
+                      <button
+                        class="btn btn-outline-primary btn-sm w-100 enroll-btn"
+                        onclick="
+                          enroll(
+                            'ALC106',
+                            'โรงเหล้า',
+                            'เบียร์ 5 ลัง + แสง 3 กลม',
+                            this,
+                          )
+                        "
+                      >
+                        + เพิ่มรายวิชา
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- รายวิชาที่เลือกลงทะเบียน -->
+        <div class="card mb-4 border-success shadow-sm">
+          <div
+            class="card-header bg-success text-white font-weight-bold"
+            style="border-bottom: none"
+          >
+            รายวิชาที่อยู่ในตารางเรียน (Selected Courses)
+          </div>
+          <div class="card-body p-0 bg-white">
+            <div class="table-responsive">
+              <table class="table table-hover mb-0" id="selected-table">
+                <thead>
+                  <tr style="background-color: #e8f5e9">
+                    <th
+                      width="15%"
+                      style="background-color: #28a745; color: white"
+                    >
+                      รหัสวิชา
+                    </th>
+                    <th
+                      width="40%"
+                      style="background-color: #28a745; color: white"
+                    >
+                      ชื่อวิชา
+                    </th>
+                    <th
+                      width="30%"
+                      style="background-color: #28a745; color: white"
+                    >
+                      หน่วยกิต (ปริมาณที่ต้องรับผิดชอบ)
+                    </th>
+                    <th
+                      width="15%"
+                      style="background-color: #28a745; color: white"
+                    >
+                      สถานะ
+                    </th>
+                  </tr>
+                </thead>
+                <tbody id="selected-courses-body">
+                  <tr id="empty-row">
+                    <td colspan="4" class="text-center text-muted py-5">
+                      <h5 class="mb-0" style="color: #ccc">
+                        ยังไม่ได้เลือกร้าน (คืนนี้ยังไม่มีที่สิงสถิต)
+                      </h5>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card-footer bg-white text-end p-3 border-top-0">
+            <button
+              class="btn btn-success btn-lg px-5 shadow-sm"
+              onclick="confirmRegistration()"
+            >
+              ยืนยันการลงทะเบียน (ห้ามเท)
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="footer">
+        สำนักทะเบียนและประมวลผล คณะแอลกอฮอล์ศาสตร์ วิทยาเขตโคราช (เมืองย่าโม)<br />
+        <small class="text-light"
+          >คำเตือน: การดื่มสุราทำให้ความสามารถในการขับขี่ลดลง
+          ลงทะเบียนแล้วห้ามเทเพื่อน</small
+        >
+      </div>
+    </div>
+
+    <!-- Modal สำหรับแจ้งเตือน -->
+    <div class="modal fade" id="systemModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div
+            class="modal-header"
+            style="background-color: #003366; color: white"
+          >
+            <h5 class="modal-title">แจ้งเตือนจากระบบ REG</h5>
+            <button
+              type="button"
+              class="btn-close btn-close-white"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div
+            class="modal-body text-center p-4"
+            id="systemModalBody"
+            style="font-size: 1.1em"
+          >
+            <!-- ข้อความแจ้งเตือน -->
+          </div>
+          <div class="modal-footer justify-content-center border-0">
+            <button
+              type="button"
+              class="btn btn-primary px-4"
+              data-bs-dismiss="modal"
+            >
+              รับทราบครับอาจารย์
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      // ระบบ Login
+      function login() {
+        const studentId = document.getElementById("studentIdInput").value;
+        const studentName = document.getElementById("studentNameInput").value;
+
+        if (studentId && studentName) {
+          // เอาค่าไปแสดงในหน้าหลัก
+          document.getElementById("display-nav-id").innerText = studentId;
+          document.getElementById("display-card-id").innerText = studentId;
+          document.getElementById("display-card-name").innerText = studentName;
+
+          // ซ่อนหน้า Login โชว์หน้าหลัก
+          document.getElementById("login-overlay").style.display = "none";
+          document.getElementById("main-content").style.display = "block";
+        }
+      }
+
+      // ระบบลงทะเบียนวิชา
+      let courseCount = 0;
+
+      function enroll(code, name, credit, btnElement) {
+        const tbody = document.getElementById("selected-courses-body");
+        const emptyRow = document.getElementById("empty-row");
+
+        if (emptyRow) {
+          emptyRow.remove();
+        }
+
+        const newRow = document.createElement("tr");
+        newRow.id = "row-" + code;
+        newRow.innerHTML = `
+                <td><strong>${code}</strong></td>
+                <td class="text-left"><strong>${name}</strong></td>
+                <td><span class="text-warning fw-bold">${credit}</span></td>
+                <td><button class="btn btn-danger btn-sm w-100" onclick="drop('${code}', '${btnElement.id}')">ถอน (เท)</button></td>
+            `;
+        tbody.appendChild(newRow);
+
+        const btnId = "btn-" + code;
+        btnElement.id = btnId;
+        btnElement.disabled = true;
+        btnElement.className = "btn btn-secondary btn-sm w-100";
+        btnElement.innerText = "ลงทะเบียนแล้ว";
+
+        courseCount++;
+      }
+
+      function drop(code, originalBtnId) {
+        const row = document.getElementById("row-" + code);
+        if (row) row.remove();
+
+        const originalBtn = document.getElementById(originalBtnId);
+        if (originalBtn) {
+          originalBtn.disabled = false;
+          originalBtn.className =
+            "btn btn-outline-primary btn-sm w-100 enroll-btn";
+          originalBtn.innerText = "+ เพิ่มรายวิชา";
+        }
+
+        courseCount--;
+
+        if (courseCount === 0) {
+          const tbody = document.getElementById("selected-courses-body");
+          tbody.innerHTML = `
+                    <tr id="empty-row">
+                        <td colspan="4" class="text-center text-muted py-5">
+                            <h5 class="mb-0" style="color: #ccc;">ยังไม่ได้เลือกร้าน (คืนนี้ยังไม่มีที่สิงสถิต)</h5>
+                        </td>
+                    </tr>
+                `;
+        }
+      }
+
+      function confirmRegistration() {
+        const modalBody = document.getElementById("systemModalBody");
+        const systemModal = new bootstrap.Modal(
+          document.getElementById("systemModal"),
+        );
+        const studentName =
+          document.getElementById("display-card-name").innerText;
+
+        if (courseCount === 0) {
+          modalBody.innerHTML = `
+                    <div class="text-danger mb-3" style="font-size: 3rem;">⚠️</div>
+                    <strong class="text-danger">คุณ ${studentName} กรุณาลงทะเบียนอย่างน้อย 1 วิชา!</strong><br><br>
+                    <span class="text-muted">ตับยังว่าง จะปล่อยให้คืนนี้ผ่านไปเฉยๆ หรอ?</span>
+                `;
+        } else {
+          modalBody.innerHTML = `
+                    <div class="text-success mb-3" style="font-size: 3rem;">🍻</div>
+                    <strong class="text-success" style="font-size: 1.2em;">อนุมัติการลงทะเบียนเรียน!</strong><br><br>
+                    นิสิต <strong>${studentName}</strong><br>
+                    กรุณาเตรียม <strong>เบียร์และแสงโสม</strong> ตามหน่วยกิตที่ลงไว้<br>
+                    และไปรายงานตัวที่เคาน์เตอร์บาร์ก่อน 22.00 น.
+                `;
+        }
+
+        systemModal.show();
+      }
+    </script>
+  </body>
+</html>
